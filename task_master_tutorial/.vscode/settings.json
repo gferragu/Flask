@@ -1,0 +1,6 @@
+{
+    "python.pythonPath": "/opt/anaconda3/envs/flask/bin/python"
+}, 
+"files.associations": {
+    "*.html": "html"
+}
