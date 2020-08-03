@@ -1,5 +1,5 @@
-from flask import Flask, render_template, url_for
-from flask_sqlalchemy import SQLAlchemy # Note, the 'SQAL' portion ***needs*** to be capitalized
+from flask import Flask, render_template, url_for, request, redirect
+from flask_sqlalchemy import SQLAlchemy # Note, the 'SQAL' portion ***needs*** to be capitalizede
 from datetime import datetime
 
 # To run in new terminal:
@@ -7,7 +7,8 @@ from datetime import datetime
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///test.db'
-db = SQLAlchemy(app)
+db = SQLAlchemy(app)   # To use this, run /opt/anaconda3/envs/flask/bin/python
+                       # Then "from app import db" and execute "db.create_all()"
 
 class to_do(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -19,9 +20,48 @@ class to_do(db.Model):
         return '<Task %r>' % self.id
 
 
-@app.route('/')
+@app.route('/', methods=['POST','GET'])
 def index():
-    return render_template('index.html')
+    if request.method == 'POST':
+        task_content = request.form['content'] #'content' is the id from the <form> in index.html
+        new_task = to_do(content=task_content)
+
+        try:
+            db.session.add(new_task)
+            db.session.commit()
+            return redirect('/') # redirects back to 'index.html'
+        except:
+            return 'There was an issue adding your task'
+    else:
+        tasks = to_do.query.order_by(to_do.date_created).all()
+        return render_template('index.html', tasks=tasks)
+
+@app.route('/delete/<int:id>')
+def delete(id):
+    task_to_delete = to_do.query.get_or_404(id)
+
+    try:
+        db.session.delete(task_to_delete)
+        db.session.commit()
+        return redirect('/')
+    except:
+        return "There was a problem deleting the task"
+
+@app.route('/update/<int:id>', methods=['POST','GET'])
+def update(id):
+    task = to_do.query.get_or_404(id)
+
+    if request.method == 'POST':
+        task.content = request.form['content']
+
+        try:
+            db.session.commit()
+            return redirect('/')
+        except:
+            return "There was a problem updating the task"
+
+    else:
+        return render_template('update.html', task=task)
 
 if __name__ == "__main__":
     app.run(debug=True)
